@@ -1,0 +1,13 @@
+{
+  "_комментарий": "Optional service descriptor for a control panel. Adjust id/name/port to your setup.",
+  "id": "имя-реггера",
+  "name": "Имя реггера",
+  "group": "Авторег",
+  "kind": "autoreg",
+  "start": "bash start.sh",
+  "port": 9900,
+  "panel": "http://127.0.0.1:9900",
+  "proxy": "recommended",
+  "log": "panel.log",
+  "note": "Regger panel. Copy this file with the template and change the port."
+}
