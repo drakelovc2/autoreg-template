@@ -1,0 +1,18 @@
+{
+  "mail_base": "https://mail.example.com",
+  "mail_domain": "example.com",
+  "admin_key": "REPLACE_WITH_ADMIN_KEY",
+
+  "poll_interval_sec": 25,
+  "aliases_per_cycle": 25,
+  "request_timeout_sec": 25,
+
+  "discover_unknown_mails": true,
+  "unknown_scan_limit": 50,
+
+  "history_scan": true,
+  "history_scan_interval_sec": 900,
+  "import_log_codes": true,
+
+  "address_jwts": {}
+}

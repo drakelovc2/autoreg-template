@@ -14,7 +14,7 @@
 
 - **Один контракт:** `register_one()`, `test_key()`, `list_models()` — панель и банк работают с любым адаптером.
 - **HTTP и браузер:** `requests` для протокольных флоу, Camoufox/Playwright для форм и капчи.
-- **Почта:** catch-all через admin API (apimail / [@apimaildrakebot](https://t.me/apimaildrakebot)), Gmail-алиасы через IMAP, точка расширения под свой провайдер. Подробнее — `docs/APIMAIL.md`.
+- **Почта:** catch-all через admin API (apimail / [@apimaildrakebot](https://t.me/apimaildrakebot)), Gmail-алиасы через IMAP, точка расширения под свой провайдер. В `apimail/` — исходники панели для своего catch-all движка. Подробнее — `docs/APIMAIL.md`.
 - **Прокси:** статические списки, ротация сессий, ISP-зоны, отдельный exit-IP на аккаунт.
 - **Панель:** запуск/стоп прогонов, прогресс по воркерам, список аккаунтов, логи.
 - **Атомарный банк:** JSONL + combo-файл, межпроцессный лок, идемпотентная запись по email.
@@ -63,10 +63,11 @@ start.bat
 core/          движки + контракт адаптера (начинать с core/register.py)
 panel/         локальная панель
 bridge/        опциональные помощники пула ключей
+apimail/       исходники панели для своего catch-all движка
 tests/         self-тесты
 tools/         recon и mock-сайт
 examples/      два минимальных адаптера: HTTP-OTP и браузер+Turnstile
-docs/          ARCHITECTURE.md и STANDARD.ru.md
+docs/          ARCHITECTURE.md, APIMAIL.md и STANDARD.ru.md
 SKILL.md       точка входа для агентов
 TERMS.md       acceptable use
 ```

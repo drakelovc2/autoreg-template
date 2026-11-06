@@ -1,0 +1,1266 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>apimail-panel — наша почта (последний код, алиасы, лента)</title>
+<style>
+  :root {
+    --bg-base: #090d16;
+    --bg-surface: #0f1726;
+    --bg-elevated: #152033;
+    --bg-subtle: #1c2a42;
+    --border: #223452;
+    --border-hover: #324b75;
+    --border-bright: #3d5d91;
+    --text-primary: #f1f5f9;
+    --text-secondary: #94a3b8;
+    --text-muted: #64748b;
+    --accent: #3b82f6;
+    --accent-glow: rgba(59, 130, 246, 0.25);
+    --accent-hover: #60a5fa;
+    --ok: #10b981;
+    --ok-bg: rgba(16, 185, 129, 0.12);
+    --ok-border: rgba(16, 185, 129, 0.35);
+    --warn: #f59e0b;
+    --warn-bg: rgba(245, 158, 11, 0.12);
+    --warn-border: rgba(245, 158, 11, 0.35);
+    --bad: #ef4444;
+    --bad-bg: rgba(239, 68, 68, 0.12);
+    --bad-border: rgba(239, 68, 68, 0.35);
+    --purple: #a855f7;
+    --purple-bg: rgba(168, 85, 247, 0.12);
+    --purple-border: rgba(168, 85, 247, 0.35);
+    --dim-bg: rgba(148, 163, 184, 0.1);
+    --dim-border: rgba(148, 163, 184, 0.25);
+    --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+    --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    --radius-sm: 6px;
+    --radius-md: 10px;
+    --radius-lg: 14px;
+    --transition: 0.18s ease;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background-color: var(--bg-base);
+    color: var(--text-primary);
+    font-family: var(--sans);
+    font-size: 13px;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+    min-width: 900px;
+  }
+
+  .icon {
+    display: inline-block;
+    width: 14px;
+    height: 14px;
+    vertical-align: -2px;
+    stroke: currentColor;
+    fill: none;
+    stroke-width: 2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+
+  .mono { font-family: var(--mono); font-size: 12px; }
+  .hide { display: none !important; }
+
+  /* Header */
+  header {
+    background: var(--bg-surface);
+    border-bottom: 1px solid var(--border);
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 22px;
+    gap: 16px;
+    flex-wrap: wrap;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+  }
+
+  .header-brand { display: flex; align-items: center; gap: 12px; }
+
+  .status-indicator {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--bg-elevated);
+    border: 1px solid var(--border);
+    padding: 4px 10px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 500;
+  }
+
+  .pulse-dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: var(--ok);
+    box-shadow: 0 0 8px var(--ok);
+    transition: var(--transition);
+  }
+  .pulse-dot.offline { background: var(--bad); box-shadow: 0 0 8px var(--bad); }
+  .pulse-dot.warn { background: var(--warn); box-shadow: 0 0 8px var(--warn); }
+
+  .brand-title {
+    font-size: 16px; font-weight: 700; letter-spacing: -0.01em;
+    display: flex; align-items: center; gap: 8px;
+  }
+
+  .ver-badge {
+    font-size: 11px; font-weight: 600;
+    color: var(--accent-hover);
+    background: var(--accent-glow);
+    padding: 2px 7px;
+    border-radius: 6px;
+    border: 1px solid rgba(59, 130, 246, 0.3);
+    font-family: var(--mono);
+  }
+
+  .meta-info {
+    font-size: 12px; color: var(--text-muted);
+    display: flex; align-items: center; gap: 6px; flex-wrap: wrap;
+  }
+  .meta-info strong { color: var(--text-secondary); font-family: var(--mono); font-weight: 500; }
+
+  .run-panel {
+    display: flex; align-items: center; gap: 10px;
+    background: var(--bg-elevated);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    padding: 6px 12px;
+  }
+
+  input[type=number], input[type=text], select {
+    background: var(--bg-base);
+    color: var(--text-primary);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 5px 8px;
+    font-size: 12px;
+    font-family: var(--mono);
+    outline: none;
+    transition: border-color var(--transition);
+  }
+  input[type=number]:focus, input[type=text]:focus, select:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 2px var(--accent-glow);
+  }
+  input[type=number] { width: 64px; text-align: center; }
+
+  .checkbox-label {
+    display: inline-flex; align-items: center; gap: 6px;
+    font-size: 12px; color: var(--text-secondary);
+    cursor: pointer; user-select: none;
+  }
+  .checkbox-label input[type=checkbox] { accent-color: var(--accent); width: 14px; height: 14px; cursor: pointer; }
+
+  button {
+    font-family: inherit; font-size: 12px; font-weight: 600;
+    padding: 6px 12px;
+    border-radius: var(--radius-sm);
+    border: 1px solid transparent;
+    cursor: pointer;
+    display: inline-flex; align-items: center; gap: 6px;
+    transition: all var(--transition);
+    user-select: none;
+  }
+  button:active { transform: translateY(1px); }
+
+  .btn-primary { background: var(--accent); color: #fff; border-color: #2563eb; box-shadow: 0 2px 8px var(--accent-glow); }
+  .btn-primary:hover { background: var(--accent-hover); }
+  .btn-danger { background: transparent; border-color: var(--bad); color: var(--bad); }
+  .btn-danger:hover { background: var(--bad-bg); }
+  .btn-ghost { background: var(--bg-elevated); border-color: var(--border); color: var(--text-secondary); }
+  .btn-ghost:hover { background: var(--bg-subtle); color: var(--text-primary); border-color: var(--border-hover); }
+
+  nav.tabs-nav {
+    display: flex; gap: 4px;
+    padding: 12px 22px 0;
+    background: var(--bg-base);
+    border-bottom: 1px solid var(--border);
+  }
+  nav.tabs-nav button {
+    background: transparent; color: var(--text-secondary);
+    border: 1px solid transparent; border-bottom: none;
+    border-radius: 8px 8px 0 0;
+    padding: 9px 18px; font-size: 13px; font-weight: 500;
+    position: relative; top: 1px;
+  }
+  nav.tabs-nav button:hover { color: var(--text-primary); background: rgba(255, 255, 255, 0.02); }
+  nav.tabs-nav button.active {
+    background: var(--bg-surface); color: var(--text-primary);
+    border-color: var(--border); border-bottom-color: var(--bg-surface); font-weight: 600;
+  }
+  nav.tabs-nav button .tab-count {
+    font-size: 11px; background: var(--bg-elevated);
+    border: 1px solid var(--border); color: var(--text-muted);
+    padding: 1px 6px; border-radius: 999px;
+    font-family: var(--mono); margin-left: 6px;
+  }
+
+  main { padding: 20px 22px 50px; max-width: 1440px; margin: 0 auto; }
+
+  .card {
+    background: var(--bg-surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 18px 20px;
+    margin-bottom: 18px;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.2);
+  }
+  .card-header {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 14px; gap: 12px; flex-wrap: wrap;
+  }
+  .card-title {
+    font-size: 13px; font-weight: 700; text-transform: uppercase;
+    letter-spacing: 0.05em; color: var(--text-secondary);
+    display: flex; align-items: center; gap: 8px;
+  }
+  .card-actions { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+
+  .chip-bar { display: flex; gap: 8px; margin-bottom: 14px; flex-wrap: wrap; }
+  .chip-counter {
+    background: var(--bg-elevated);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 4px 10px; font-size: 12px;
+    display: flex; align-items: center; gap: 6px;
+  }
+  .chip-counter strong { font-family: var(--mono); }
+
+  /* Главный экран: последний код */
+  .code-hero {
+    background: linear-gradient(145deg, var(--bg-elevated), #16243b);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 22px 24px;
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 24px; flex-wrap: wrap;
+  }
+  .code-hero-main { display: flex; align-items: center; gap: 18px; flex-wrap: wrap; }
+  .code-big {
+    font-family: var(--mono);
+    font-size: 54px; font-weight: 700; letter-spacing: 0.12em;
+    color: #e2f0ff;
+    text-shadow: 0 0 26px var(--accent-glow);
+    line-height: 1.05;
+  }
+  .code-big.empty { color: var(--text-muted); font-size: 30px; letter-spacing: 0.02em; text-shadow: none; }
+  .code-meta { display: flex; flex-direction: column; gap: 4px; }
+  .code-addr { font-family: var(--mono); color: #60a5fa; font-size: 14px; font-weight: 600; }
+  .code-subj { color: var(--text-secondary); font-size: 12px; max-width: 620px; }
+  .code-when { color: var(--text-muted); font-size: 12px; }
+
+  .badge {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 3px 9px; border-radius: 999px;
+    font-size: 11px; font-weight: 600; line-height: 1;
+    border: 1px solid; white-space: nowrap;
+  }
+  .badge .dot { width: 6px; height: 6px; border-radius: 50%; }
+  .badge.st-ok { background: var(--ok-bg); color: var(--ok); border-color: var(--ok-border); }
+  .badge.st-ok .dot { background: var(--ok); }
+  .badge.st-warn { background: var(--warn-bg); color: var(--warn); border-color: var(--warn-border); }
+  .badge.st-warn .dot { background: var(--warn); }
+  .badge.st-bad { background: var(--bad-bg); color: var(--bad); border-color: var(--bad-border); }
+  .badge.st-bad .dot { background: var(--bad); }
+  .badge.st-dim { background: var(--dim-bg); color: var(--text-secondary); border-color: var(--dim-border); }
+  .badge.st-dim .dot { background: var(--text-muted); }
+  .badge.st-purple { background: var(--purple-bg); color: var(--purple); border-color: var(--purple-border); }
+  .badge.st-purple .dot { background: var(--purple); }
+
+  .banner {
+    border-radius: var(--radius-md);
+    padding: 10px 14px;
+    margin-bottom: 16px;
+    font-size: 12px;
+    border: 1px solid var(--warn-border);
+    background: var(--warn-bg);
+    color: #fde68a;
+  }
+  .banner.bad { border-color: var(--bad-border); background: var(--bad-bg); color: #fca5a5; }
+
+  .table-responsive { width: 100%; overflow-x: auto; border: 1px solid var(--border); border-radius: var(--radius-md); }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; text-align: left; }
+  thead { background: var(--bg-elevated); }
+  th {
+    padding: 10px 12px; font-size: 11px; font-weight: 600;
+    text-transform: uppercase; letter-spacing: 0.05em;
+    color: var(--text-muted); border-bottom: 1px solid var(--border); white-space: nowrap;
+  }
+  td { padding: 10px 12px; border-bottom: 1px solid #162338; vertical-align: middle; }
+  tbody tr:nth-child(even) { background: rgba(21, 32, 51, 0.35); }
+  tbody tr:hover { background: rgba(59, 130, 246, 0.06); }
+
+  .copy-btn {
+    background: var(--bg-subtle); border: 1px solid var(--border);
+    color: var(--text-secondary); border-radius: 4px;
+    padding: 2px 7px; font-size: 11px; cursor: pointer;
+    font-family: var(--sans); font-weight: 500; margin-left: 8px;
+    transition: var(--transition);
+  }
+  .copy-btn:hover { background: var(--accent); color: #fff; border-color: var(--accent); }
+  .copy-btn.copied { background: var(--ok); color: #fff; border-color: var(--ok); }
+
+  .stat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 14px; margin-bottom: 16px; }
+  .stat-card {
+    background: var(--bg-elevated); border: 1px solid var(--border);
+    border-radius: var(--radius-md); padding: 14px 16px;
+    display: flex; flex-direction: column; gap: 6px;
+    position: relative; overflow: hidden;
+  }
+  .stat-card::after {
+    content: ""; position: absolute; top: 0; left: 0; right: 0; height: 2px;
+    background: linear-gradient(90deg, var(--accent), transparent); opacity: 0.6;
+  }
+  .stat-label { font-size: 12px; font-weight: 500; color: var(--text-muted); }
+  .stat-value { font-size: 22px; font-weight: 700; font-family: var(--mono); letter-spacing: -0.02em; }
+  .stat-sub { font-size: 11px; color: var(--text-muted); }
+
+  .log-console {
+    background: #060910; border: 1px solid var(--border);
+    border-radius: var(--radius-md); padding: 12px 14px;
+    font-family: var(--mono); font-size: 12px; line-height: 1.6;
+    color: #cbd5e1; max-height: 420px; overflow-y: auto;
+    white-space: pre-wrap; word-break: break-all;
+  }
+  .log-row-info { color: #93c5fd; }
+  .log-row-ok { color: #86efac; }
+  .log-row-warn { color: #fde047; }
+  .log-row-bad { color: #fca5a5; }
+
+  .api-hint { margin-top: 12px; font-size: 11px; color: var(--text-muted); font-family: var(--mono); }
+
+  /* Модалка сырого письма */
+  .modal-backdrop {
+    position: fixed; inset: 0; background: rgba(3, 7, 18, 0.78);
+    z-index: 500; display: flex; align-items: center; justify-content: center; padding: 24px;
+  }
+  .modal {
+    background: var(--bg-surface); border: 1px solid var(--border-hover);
+    border-radius: var(--radius-lg); width: min(1080px, 100%);
+    max-height: 88vh; display: flex; flex-direction: column;
+    box-shadow: 0 24px 60px rgba(0, 0, 0, 0.6);
+  }
+  .modal-head {
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 12px; padding: 14px 18px; border-bottom: 1px solid var(--border);
+  }
+  .modal-body { padding: 14px 18px; overflow: auto; }
+  .raw-box {
+    background: #060910; border: 1px solid var(--border);
+    border-radius: var(--radius-md); padding: 12px 14px;
+    font-family: var(--mono); font-size: 12px; line-height: 1.55;
+    white-space: pre-wrap; word-break: break-word;
+    max-height: 60vh; overflow: auto; color: #cbd5e1;
+  }
+
+  .toast {
+    position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
+    background: var(--bg-subtle); border: 1px solid var(--border-hover);
+    color: var(--text-primary); padding: 8px 16px; border-radius: 999px;
+    font-size: 12px; z-index: 900; box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="header-brand">
+    <div class="status-indicator" id="svc-status-pill" title="Доступность apimail (движок catch-all mailbox)">
+      <span class="pulse-dot" id="svc-dot"></span>
+      <span id="svc-status-txt">apimail: проверяю…</span>
+    </div>
+    <div class="brand-title">
+      <span id="svc-name">apimail-panel</span>
+      <span class="ver-badge" id="svc-ver">v1.0.0</span>
+    </div>
+    <div class="meta-info">
+      <span>порт:</span><strong id="svc-port">9971</strong>
+      <span style="margin-left:8px;">обход:</span><strong id="last-poll">—</strong>
+      <span style="margin-left:8px;">алиасов:</span><strong id="hdr-aliases">0</strong>
+      <span style="margin-left:8px;">писем:</span><strong id="hdr-mails">0</strong>
+    </div>
+  </div>
+
+  <div class="run-panel">
+    <span class="meta-info">движок:</span>
+    <strong class="mono" id="hdr-base" style="font-size:11px;">—</strong>
+    <button class="btn-primary" id="btn-refresh" title="Запустить фоновый обход алиасов сейчас">
+      <svg class="icon" viewBox="0 0 24 24"><polyline points="23 4 23 10 17 10"></polyline><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path></svg>
+      <span>Обход сейчас</span>
+    </button>
+  </div>
+</header>
+
+<nav class="tabs-nav" aria-label="Вкладки панели почты">
+  <button data-tab="codes" class="active" id="tab-btn-codes">Коды <span class="tab-count" id="badge-count-codes">0</span></button>
+  <button data-tab="aliases" id="tab-btn-aliases">Алиасы <span class="tab-count" id="badge-count-aliases">0</span></button>
+  <button data-tab="search" id="tab-btn-search">Поиск</button>
+  <button data-tab="logs" id="tab-btn-logs">Логи</button>
+</nav>
+
+<main>
+  <div id="alert-banner" class="banner hide"></div>
+
+  <!-- ==================== КОДЫ (главный экран) ==================== -->
+  <section id="tab-codes">
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title">
+          <svg class="icon" viewBox="0 0 24 24"><path d="M4 4h16v16H4z"></path><path d="M8 9h8M8 13h5"></path></svg>
+          Последний код
+        </div>
+        <div class="card-actions">
+          <span class="meta-info" id="hero-when"></span>
+        </div>
+      </div>
+      <div class="code-hero">
+        <div class="code-hero-main">
+          <div class="code-big empty" id="code-big">—</div>
+          <div class="code-meta">
+            <div class="code-addr" id="code-addr">кодов ещё не было</div>
+            <div class="code-subj" id="code-subj">панель сама обходит алиасы и складывает коды в data/codes.jsonl</div>
+            <div class="code-when mono" id="code-when"></div>
+          </div>
+        </div>
+        <div class="card-actions">
+          <span class="badge st-dim" id="code-source"><span class="dot"></span><span>источник —</span></span>
+          <button class="btn-primary" id="btn-copy-last">
+            <svg class="icon" viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+            <span>Скопировать код</span>
+          </button>
+          <button class="btn-ghost" id="btn-open-last">Письмо целиком</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title">
+          <svg class="icon" viewBox="0 0 24 24"><path d="M22 12h-6l-2 3h-4l-2-3H2"></path><path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"></path></svg>
+          Лента писем
+        </div>
+        <div class="card-actions">
+          <input type="text" id="feed-address" placeholder="адрес @example.com (пусто — ВСЕ письма)" style="width: 330px;">
+          <select id="feed-limit" style="width: 96px;">
+            <option value="25">25</option>
+            <option value="50" selected>50</option>
+            <option value="100">100</option>
+            <option value="200">200</option>
+          </select>
+          <label class="checkbox-label" title="показывать только письма с извлечённым кодом">
+            <input type="checkbox" id="feed-only-codes"> <span>только с кодами</span>
+          </label>
+          <button class="btn-primary" id="btn-feed-load">
+            <svg class="icon" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+            <span>Показать</span>
+          </button>
+          <span class="meta-info" id="feed-status"></span>
+        </div>
+      </div>
+
+      <div class="table-responsive">
+        <table>
+          <thead>
+            <tr>
+              <th>Время</th>
+              <th>Адрес</th>
+              <th>Тема</th>
+              <th>Отправитель</th>
+              <th>Код</th>
+              <th>Источник</th>
+              <th>Письмо</th>
+            </tr>
+          </thead>
+          <tbody id="feed-rows"></tbody>
+        </table>
+      </div>
+      <div style="display:flex; gap:10px; align-items:center; margin-top:10px;">
+        <button class="btn-ghost" id="btn-feed-more" style="display:none;">Показать ещё</button>
+        <span class="meta-info" id="feed-more-info"></span>
+      </div>
+      <div class="api-hint">
+        <span>// API: GET /api/mails?address=&amp;limit=&amp;offset= (без address — все письма движка) &nbsp;·&nbsp; GET /api/mail?address=&amp;id= (сырой MIME)</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- ==================== АЛИАСЫ ==================== -->
+  <section id="tab-aliases" class="hide">
+    <div class="card">
+      <div class="chip-bar" id="alias-chips">
+        <div class="chip-counter">Всего: <strong id="cnt-aliases">0</strong></div>
+        <div class="chip-counter" style="color:var(--ok)">с письмами: <strong id="cnt-live">0</strong></div>
+        <div class="chip-counter">пусто: <strong id="cnt-empty">0</strong></div>
+        <div class="chip-counter" style="color:#60a5fa">писем: <strong id="cnt-mails">0</strong></div>
+        <div class="chip-counter" style="color:var(--purple)">кодов в истории: <strong id="cnt-codes">0</strong></div>
+      </div>
+
+      <div class="card-header">
+        <div class="card-title">
+          <svg class="icon" viewBox="0 0 24 24"><path d="M4 4h16v16H4z"></path><path d="M4 9h16"></path></svg>
+          Реестр адресов и поддоменов (catch-all)
+        </div>
+        <div class="card-actions">
+          <input type="text" id="alias-new" placeholder="alias@example.com или user@gh.example.com" style="width: 320px;">
+          <button class="btn-primary" id="btn-alias-add">Добавить алиас</button>
+          <button class="btn-ghost" id="btn-alias-refresh">Обход сейчас</button>
+          <span class="meta-info" id="alias-status"></span>
+        </div>
+      </div>
+
+      <div class="table-responsive">
+        <table>
+          <thead>
+            <tr>
+              <th>Адрес</th>
+              <th>Поддомен</th>
+              <th>Писем</th>
+              <th>Последнее письмо</th>
+              <th>Последний код</th>
+              <th>Источник</th>
+              <th>Проверен</th>
+              <th>Действия</th>
+            </tr>
+          </thead>
+          <tbody id="alias-rows"></tbody>
+        </table>
+      </div>
+      <div class="api-hint">
+        <span>// API: GET /api/aliases · POST /api/aliases {address} · DELETE /api/aliases?address= · POST /api/refresh</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- ==================== ПОИСК ==================== -->
+  <section id="tab-search" class="hide">
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title">
+          <svg class="icon" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+          Поиск по адресу / префиксу / коду
+        </div>
+        <div class="card-actions">
+          <input type="text" id="search-q" placeholder="conol, tmpjxrr, 076915, user@gh.example.com" style="width: 360px;">
+          <button class="btn-primary" id="btn-search">Искать</button>
+          <span class="meta-info" id="search-status"></span>
+        </div>
+      </div>
+
+      <div class="table-responsive">
+        <table>
+          <thead>
+            <tr>
+              <th>Адрес</th>
+              <th>В реестре</th>
+              <th>Писем</th>
+              <th>Кодов</th>
+              <th>Последний код</th>
+              <th>Когда</th>
+              <th>Совпадения</th>
+              <th>Действия</th>
+            </tr>
+          </thead>
+          <tbody id="search-rows"></tbody>
+        </table>
+      </div>
+      <div class="api-hint">
+        <span>// API: GET /api/search?q= (реестр + история кодов + живая проба apimail)</span>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title">
+          <svg class="icon" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line><line x1="8" y1="11" x2="14" y2="11"></line></svg>
+          Поиск по содержимому писем (ник → на какой почте зареган)
+        </div>
+        <div class="card-actions">
+          <input type="text" id="body-q" placeholder="lfodoskdkd, имя аккаунта, фраза из письма" style="width: 360px;">
+          <button class="btn-primary" id="btn-body-search">Найти по тексту</button>
+          <button class="btn-ghost" id="btn-index-sync" title="Дотянуть страницы глобального списка в индекс прямо сейчас">Доиндексировать</button>
+          <span class="meta-info" id="body-status"></span>
+        </div>
+      </div>
+      <div class="chip-bar">
+        <div class="chip-counter">в индексе писем: <strong id="idx-count">0</strong></div>
+        <div class="chip-counter">курсор: <strong id="idx-offset">0</strong></div>
+        <div class="chip-counter">размер базы: <strong id="idx-size">0 КБ</strong></div>
+        <div class="chip-counter">последняя синхронизация: <strong id="idx-sync">—</strong></div>
+      </div>
+
+      <div class="table-responsive">
+        <table>
+          <thead>
+            <tr>
+              <th>Время</th>
+              <th>Адрес</th>
+              <th>Тема</th>
+              <th>Отправитель</th>
+              <th>Фрагмент</th>
+              <th>Код</th>
+              <th>Действия</th>
+            </tr>
+          </thead>
+          <tbody id="body-rows"></tbody>
+        </table>
+      </div>
+      <div class="api-hint">
+        <span>// API: GET /api/search_body?q= (FTS5 по теме/телу/адресу) · POST /api/index/sync {pages} · POST /api/index/reset</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- ==================== ЛОГИ ==================== -->
+  <section id="tab-logs" class="hide">
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title">
+          <svg class="icon" viewBox="0 0 24 24"><polyline points="4 17 10 11 4 5"></polyline><line x1="12" y1="19" x2="20" y2="19"></line></svg>
+          Логи панели (data/panel.log)
+        </div>
+        <div class="card-actions">
+          <label class="checkbox-label" title="Авто-обновление каждые 5с">
+            <input type="checkbox" id="log-auto-refresh" checked> <span>Авто 5с</span>
+          </label>
+          <button class="btn-ghost" id="btn-log-refresh">Обновить</button>
+          <button class="btn-ghost" id="btn-log-clear">Очистить вид</button>
+        </div>
+      </div>
+      <div class="log-console" id="log" role="log" aria-live="polite"></div>
+      <div class="api-hint"><span>// API: GET /api/logs?tail=200</span></div>
+    </div>
+  </section>
+</main>
+
+<div id="modal-root"></div>
+
+<script>
+/* =========================================================================
+   КОНФИГУРАЦИЯ (КАНОН PANEL-SPEC)
+   ========================================================================= */
+window.APP_CONFIG = {
+  SERVICE_NAME: "apimail-panel",
+  VERSION: "v1.1.0",
+  DEFAULT_PORT: 9971,
+  API_BASE: "/api",
+  POLL_INTERVAL_MS: 5000,
+  FEED_REFRESH_MS: 15000,
+  MOCK_FALLBACK: false
+};
+
+const $ = sel => document.querySelector(sel);
+const $$ = sel => Array.from(document.querySelectorAll(sel));
+const fmt = n => (n === null || n === undefined) ? "—" : n;
+
+let state = {
+  summary: null,
+  lastCode: null,
+  aliases: [],
+  feed: [],
+  feedAddress: "",
+  feedAll: [],      // накопленная лента (для «Показать ещё»)
+  feedOffset: 0,
+};
+
+/* ── утилиты ─────────────────────────────────────────────── */
+function escapeHtml(str) {
+  return String(str === null || str === undefined ? "" : str)
+    .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+}
+
+function toast(text) {
+  const el = document.createElement("div");
+  el.className = "toast";
+  el.textContent = text;
+  document.body.appendChild(el);
+  setTimeout(() => el.remove(), 1800);
+}
+
+function copyText(text) {
+  const value = String(text === null || text === undefined ? "" : text);
+  if (navigator.clipboard && window.isSecureContext) {
+    navigator.clipboard.writeText(value).then(() => toast("скопировано: " + value))
+      .catch(() => fallbackCopy(value));
+  } else {
+    fallbackCopy(value);
+  }
+}
+
+function fallbackCopy(value) {
+  const ta = document.createElement("textarea");
+  ta.value = value;
+  ta.style.position = "fixed";
+  ta.style.opacity = "0";
+  document.body.appendChild(ta);
+  ta.select();
+  try { document.execCommand("copy"); toast("скопировано: " + value); }
+  catch (e) { toast("скопировать не удалось"); }
+  ta.remove();
+}
+
+function api(path, options) {
+  return fetch(window.APP_CONFIG.API_BASE + path, options).then(async r => {
+    const text = await r.text();
+    let data = null;
+    try { data = text ? JSON.parse(text) : null; } catch (e) { data = { raw: text }; }
+    if (!r.ok) {
+      const err = new Error((data && data.error) ? data.error : ("HTTP " + r.status));
+      err.status = r.status;
+      throw err;
+    }
+    return data;
+  });
+}
+
+/* ── вкладки ─────────────────────────────────────────────── */
+const TABS = ["codes", "aliases", "search", "logs"];
+let activeTab = localStorage.getItem("apimail-tab") || "codes";
+if (!TABS.includes(activeTab)) activeTab = "codes";
+
+function switchTab(tab) {
+  if (!TABS.includes(tab)) tab = "codes";
+  activeTab = tab;
+  $$("nav.tabs-nav button").forEach(b => b.classList.toggle("active", b.dataset.tab === tab));
+  TABS.forEach(k => {
+    const el = $("#tab-" + k);
+    if (el) el.classList.toggle("hide", k !== tab);
+  });
+  localStorage.setItem("apimail-tab", tab);
+  if (tab === "aliases") loadAliases();
+  if (tab === "logs") fetchLogs();
+  if (tab === "search") $("#search-q").focus();
+}
+
+$$("nav.tabs-nav button").forEach(btn => { btn.onclick = () => switchTab(btn.dataset.tab); });
+switchTab(activeTab);
+
+/* ── шапка/сводка ────────────────────────────────────────── */
+function setServiceStatus(mode, text) {
+  const dot = $("#svc-dot");
+  dot.className = "pulse-dot" + (mode === "ok" ? "" : (mode === "warn" ? " warn" : " offline"));
+  $("#svc-status-txt").textContent = text;
+}
+
+function renderSummary(s) {
+  state.summary = s;
+  const mail = s.mail || {};
+  const counts = s.counts || {};
+  $("#svc-name").textContent = s.service || window.APP_CONFIG.SERVICE_NAME;
+  $("#svc-ver").textContent = s.version || window.APP_CONFIG.VERSION;
+  $("#svc-port").textContent = s.port || window.APP_CONFIG.DEFAULT_PORT;
+  $("#hdr-base").textContent = (mail.base || "").replace(/^https?:\/\//, "");
+  $("#last-poll").textContent = mail.last_poll_str || "—";
+  $("#hdr-aliases").textContent = fmt(counts.aliases);
+  $("#hdr-mails").textContent = fmt(counts.mails);
+  $("#badge-count-codes").textContent = fmt(counts.codes);
+  $("#badge-count-aliases").textContent = fmt(counts.aliases);
+  $("#cnt-aliases").textContent = fmt(counts.aliases);
+  $("#cnt-live").textContent = fmt(counts.aliases_live);
+  $("#cnt-empty").textContent = fmt(counts.aliases_empty);
+  $("#cnt-mails").textContent = fmt(counts.mails);
+  $("#cnt-codes").textContent = fmt(counts.codes);
+
+  const mode = mail.mode || "unknown";
+  if (mode === "auth_error") {
+    setServiceStatus("bad", "apimail: ключ не принят");
+  } else if (mail.ok === false) {
+    setServiceStatus("bad", "apimail: недоступен");
+  } else if (mode === "jwt") {
+    setServiceStatus("warn", "apimail: JWT-режим");
+  } else if (mail.ok) {
+    setServiceStatus("ok", "apimail: жив (" + mode + ")");
+  } else {
+    setServiceStatus("warn", "apimail: проверяю…");
+  }
+
+  const errors = [];
+  if (mail.last_error) errors.push(mail.last_error);
+  if (s.registry && s.registry.admin_key_set === false) errors.push("admin_key не задан в config.json — доступен только JWT-режим адресов");
+  if (errors.length) {
+    $("#alert-banner").classList.add("bad");
+    $("#alert-banner").classList.remove("hide");
+    $("#alert-banner").textContent = "⚠ " + errors.join(" · ");
+  } else {
+    $("#alert-banner").classList.add("hide");
+  }
+  renderLastCode(s.last_code);
+  renderIndexStats(s.index);
+}
+
+function renderLastCode(last) {
+  state.lastCode = last;
+  const big = $("#code-big");
+  if (last && last.code) {
+    big.className = "code-big";
+    big.textContent = last.code;
+    $("#code-addr").textContent = last.address || "";
+    $("#code-subj").textContent = last.subject || "(без темы)";
+    $("#code-when").textContent = (last.received_at || "") + (last.ago ? "  ·  " + last.ago : "");
+    const src = last.source || "apimail";
+    const badge = $("#code-source");
+    badge.className = "badge " + (src === "apimail" ? "st-ok" : "st-purple");
+    badge.innerHTML = '<span class="dot"></span><span>источник — ' + escapeHtml(src) + "</span>";
+  } else {
+    big.className = "code-big empty";
+    big.textContent = "—";
+    $("#code-addr").textContent = "кодов ещё не было";
+    $("#code-subj").textContent = "панель сама обходит алиасы и складывает коды в data/codes.jsonl";
+    $("#code-when").textContent = "";
+    $("#code-source").className = "badge st-dim";
+    $("#code-source").innerHTML = '<span class="dot"></span><span>источник —</span>';
+  }
+}
+
+/* ── лента ───────────────────────────────────────────────── */
+function renderFeed(data) {
+  const tbody = $("#feed-rows");
+  const rows = (data && data.results) || [];
+  state.feed = rows;
+  const onlyCodes = $("#feed-only-codes").checked;
+  const visible = onlyCodes ? rows.filter(r => r.code) : rows;
+  if (!visible.length) {
+    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; padding:24px; color:var(--text-muted);">'
+      + (data && data.warning ? escapeHtml(data.warning) : "Писем нет") + "</td></tr>";
+  } else {
+    tbody.innerHTML = visible.map((r, idx) => {
+      const code = r.code || "";
+      const src = r.source || (data.source === "apimail" ? "apimail" : "history");
+      const srcCls = src === "apimail" ? "st-ok" : (src.startsWith("log") ? "st-purple" : "st-dim");
+      return '<tr>'
+        + '<td class="mono" style="color:var(--text-muted); font-size:12px; white-space:nowrap;">' + escapeHtml(r.received_at || "—") + "</td>"
+        + '<td class="mono" style="color:#60a5fa; font-weight:500; white-space:nowrap;">' + escapeHtml(r.address || "") + "</td>"
+        + "<td>" + escapeHtml(r.subject || "(без темы)") + "</td>"
+        + '<td style="color:var(--text-secondary); font-size:12px;">' + escapeHtml(r.from || "—") + "</td>"
+        + '<td class="mono" style="font-weight:700; color:' + (code ? "#86efac" : "var(--text-muted)") + '; font-size:14px;">'
+        + escapeHtml(code || "—")
+        + (code ? '<button class="copy-btn" data-copy="' + escapeHtml(code) + '">copy</button>' : "")
+        + "</td>"
+        + '<td><span class="badge ' + srcCls + '"><span class="dot"></span><span>' + escapeHtml(src) + "</span></span></td>"
+        + '<td><button class="btn-ghost" style="padding:2px 8px; font-size:11px;" data-raw="' + idx + '">сырое</button></td>'
+        + "</tr>";
+    }).join("");
+  }
+  $$("#feed-rows [data-copy]").forEach(btn => {
+    btn.onclick = () => {
+      copyText(btn.dataset.copy);
+      btn.classList.add("copied");
+      setTimeout(() => btn.classList.remove("copied"), 900);
+    };
+  });
+  $$("#feed-rows [data-raw]").forEach(btn => {
+    btn.onclick = () => openRaw(visible[parseInt(btn.dataset.raw, 10)]);
+  });
+}
+
+function loadFeed(append) {
+  const address = ($("#feed-address").value || "").trim().toLowerCase();
+  const limit = parseInt($("#feed-limit").value, 10) || 50;
+  const offset = append ? (state.feedOffset || 0) : 0;
+  state.feedAddress = address;
+  if (!append) { state.feedAll = []; }
+  $("#feed-status").textContent = "загружаю…";
+  const qs = "?limit=" + encodeURIComponent(limit) + "&offset=" + offset
+    + (address ? "&address=" + encodeURIComponent(address) : "");
+  api("/mails" + qs).then(data => {
+    const rows = (data && data.results) || [];
+    state.feedAll = (state.feedAll || []).concat(rows);
+    state.feedOffset = (state.feedAll || []).length;
+    const total = data.count || state.feedAll.length;
+    renderFeed({...data, results: state.feedAll});
+    const src = data.source || "?";
+    $("#feed-status").textContent = "источник: " + src
+      + ", показано " + state.feedAll.length + " из " + fmt(total)
+      + (data.warning ? " — " + data.warning : "");
+    const more = state.feedAll.length < total;
+    $("#btn-feed-more").style.display = more ? "" : "none";
+    $("#feed-more-info").textContent = more
+      ? ("ещё " + (total - state.feedAll.length)) : "";
+  }).catch(err => {
+    $("#feed-status").textContent = "ошибка: " + err.message;
+  });
+}
+
+/* ── сырое письмо ────────────────────────────────────────── */
+function linkClass(url) {
+  // кнопки активации/подтверждения — самое нужное в письмах-регистрациях
+  return /(?:token|confirm|verif|activat|callback|magic|reset|password|signin|sign-in)/i.test(url)
+    ? "st-ok" : "st-dim";
+}
+
+function renderLinks(data) {
+  const links = data.links || [];
+  if (!links.length) return '<div style="color:var(--text-muted);">(ссылок не найдено)</div>';
+  return links.map((url, i) => {
+    const safe = escapeHtml(url);
+    const cls = linkClass(url);
+    return '<div style="display:flex; align-items:center; gap:8px; margin-bottom:8px; flex-wrap:wrap;">'
+      + '<span class="badge ' + cls + '" style="flex:0 0 auto;"><span class="dot"></span><span>'
+      + (cls === "st-ok" ? "активация" : "ссылка") + "</span></span>"
+      + '<a href="' + safe + '" target="_blank" rel="noopener noreferrer" '
+      + 'style="color:#60a5fa; word-break:break-all; text-decoration:underline;">' + safe + "</a>"
+      + '<button class="btn-ghost" data-copy="' + safe + '" style="padding:2px 8px; font-size:11px; flex:0 0 auto;">copy</button>'
+      + '<button class="btn-primary" data-open="' + safe + '" style="padding:2px 8px; font-size:11px; flex:0 0 auto;">открыть</button>'
+      + "</div>";
+  }).join("");
+}
+
+function openRaw(item) {
+  if (!item) return;
+  if (!item.id) { toast("у записи из истории нет id письма в apimail"); return; }
+  const address = item.address || state.feedAddress || "";
+  const root = $("#modal-root");
+  root.innerHTML = '<div class="modal-backdrop" id="raw-backdrop"><div class="modal">'
+    + '<div class="modal-head"><div class="card-title">Письмо #' + escapeHtml(item.id) + " · " + escapeHtml(address) + "</div>"
+    + '<div class="card-actions">'
+    + '<button class="btn-ghost" id="raw-tab-links">Ссылки</button>'
+    + '<button class="btn-ghost" id="raw-tab-body">Тело</button>'
+    + '<button class="btn-ghost" id="raw-tab-html">HTML</button>'
+    + '<button class="btn-ghost" id="raw-tab-raw">Сырой MIME</button>'
+    + '<button class="btn-ghost" id="raw-copy">Копировать</button>'
+    + '<button class="btn-danger" id="raw-close">Закрыть</button>'
+    + "</div></div>"
+    + '<div class="modal-body"><div class="meta-info" id="raw-meta" style="margin-bottom:10px;"></div>'
+    + '<div class="raw-box" id="raw-box">загружаю...</div></div></div></div>';
+  const close = () => { root.innerHTML = ""; };
+  $("#raw-close").onclick = close;
+  $("#raw-backdrop").onclick = (e) => { if (e.target.id === "raw-backdrop") close(); };
+  document.addEventListener("keydown", function esc(e) {
+    if (e.key === "Escape") { close(); document.removeEventListener("keydown", esc); }
+  });
+
+  api("/mail?address=" + encodeURIComponent(address) + "&id=" + encodeURIComponent(item.id))
+    .then(data => {
+      const links = data.links || [];
+      $("#raw-meta").innerHTML =
+        "<span>тема:</span><strong>" + escapeHtml(data.subject || "(без темы)") + "</strong>"
+        + "<span style='margin-left:10px;'>от:</span><strong>" + escapeHtml(data.from || "—") + "</strong>"
+        + "<span style='margin-left:10px;'>код:</span><strong style='color:#86efac;'>" + escapeHtml(data.code || "—") + "</strong>"
+        + "<span style='margin-left:10px;'>ссылок:</span><strong style='color:#60a5fa;'>" + links.length + "</strong>"
+        + "<span style='margin-left:10px;'>режим:</span><strong>" + escapeHtml(data.mode || "") + "</strong>"
+        + "<span style='margin-left:10px;'>размер:</span><strong>" + fmt(data.raw_len) + " б</strong>";
+      const show = (which) => {
+        const box = $("#raw-box");
+        $("#raw-copy").dataset.copy = "";
+        if (which === "links") {
+          box.innerHTML = renderLinks(data);
+          box.querySelectorAll("[data-copy]").forEach(btn => { btn.onclick = () => copyText(btn.dataset.copy); });
+          box.querySelectorAll("[data-open]").forEach(btn => { btn.onclick = () => window.open(btn.dataset.open, "_blank", "noopener"); });
+          return;
+        }
+        if (which === "html") {
+          box.textContent = data.html || "(нет HTML-части — письмо plain-text)";
+          $("#raw-copy").dataset.copy = data.html || "";
+          return;
+        }
+        const text = which === "raw" ? (data.raw || "") : (data.body || data.raw || "");
+        box.textContent = text || "(пусто)";
+        $("#raw-copy").dataset.copy = text || "";
+      };
+      // письма-активации (нет кода, есть ссылки) открываем сразу на ссылках
+      const startOn = (!data.code && links.length) ? "links" : "body";
+      show(startOn);
+      $("#raw-tab-links").onclick = () => show("links");
+      $("#raw-tab-body").onclick = () => show("body");
+      $("#raw-tab-html").onclick = () => show("html");
+      $("#raw-tab-raw").onclick = () => show("raw");
+      $("#raw-copy").onclick = () => copyText($("#raw-copy").dataset.copy || "");
+    })
+    .catch(err => { $("#raw-box").textContent = "не удалось получить письмо: " + err.message; });
+}
+
+/* ── алиасы ──────────────────────────────────────────────── */
+function renderAliases(data) {
+  const rows = (data && data.aliases) || [];
+  state.aliases = rows;
+  const tbody = $("#alias-rows");
+  if (!rows.length) {
+    tbody.innerHTML = '<tr><td colspan="8" style="text-align:center; padding:24px; color:var(--text-muted);">'
+      + "Реестр пуст — добавь адрес вручную или нажми «Обход сейчас» (пополняется из истории и catch-all)</td></tr>";
+  } else {
+    tbody.innerHTML = rows.map(r => {
+      const src = r.source || "manual";
+      const srcCls = src === "catch-all" ? "st-ok" : (src === "history" ? "st-purple" : "st-dim");
+      const mails = Number(r.mails || 0);
+      return '<tr>'
+        + '<td class="mono" style="color:#60a5fa; font-weight:500;">' + escapeHtml(r.address)
+        + (r.has_jwt ? ' <span class="badge st-warn" title="есть адресный JWT"><span class="dot"></span><span>jwt</span></span>' : "")
+        + "</td>"
+        + '<td class="mono" style="color:var(--text-muted); font-size:12px;">' + escapeHtml(r.subdomain || "—") + "</td>"
+        + '<td class="mono" style="font-weight:' + (mails ? 700 : 500) + '; color:' + (mails ? "#86efac" : "var(--text-muted)") + ';">' + fmt(mails) + "</td>"
+        + '<td style="color:var(--text-muted); font-size:12px; white-space:nowrap;">' + escapeHtml(r.last_mail_str || "—") + "</td>"
+        + '<td class="mono" style="font-weight:700;">' + escapeHtml(r.last_code || "—")
+        + (r.last_code ? '<button class="copy-btn" data-copy="' + escapeHtml(r.last_code) + '">copy</button>' : "") + "</td>"
+        + '<td><span class="badge ' + srcCls + '"><span class="dot"></span><span>' + escapeHtml(src) + "</span></span></td>"
+        + '<td style="color:var(--text-muted); font-size:12px; white-space:nowrap;">' + escapeHtml(r.last_checked_str || "—") + "</td>"
+        + '<td><button class="btn-ghost" style="padding:2px 8px; font-size:11px;" data-feed="' + escapeHtml(r.address) + '">лента</button> '
+        + '<button class="btn-danger" style="padding:2px 8px; font-size:11px;" data-del="' + escapeHtml(r.address) + '">удалить</button></td>'
+        + "</tr>";
+    }).join("");
+  }
+  $$("#alias-rows [data-copy]").forEach(btn => {
+    btn.onclick = () => { copyText(btn.dataset.copy); btn.classList.add("copied"); setTimeout(() => btn.classList.remove("copied"), 900); };
+  });
+  $$("#alias-rows [data-feed]").forEach(btn => {
+    btn.onclick = () => {
+      $("#feed-address").value = btn.dataset.feed;
+      switchTab("codes");
+      loadFeed(false);
+    };
+  });
+  $$("#alias-rows [data-del]").forEach(btn => {
+    btn.onclick = () => {
+      const address = btn.dataset.del;
+      if (!confirm("Убрать " + address + " из реестра панели? (письма на сервере не трогаем)")) return;
+      api("/aliases?address=" + encodeURIComponent(address), { method: "DELETE" })
+        .then(() => { toast("убран: " + address); loadAliases(); loadSummary(); })
+        .catch(err => toast("ошибка: " + err.message));
+    };
+  });
+}
+
+function loadAliases() {
+  api("/aliases").then(renderAliases).catch(err => {
+    $("#alias-status").textContent = "ошибка: " + err.message;
+  });
+}
+
+function loadSummary() {
+  api("/summary").then(renderSummary).catch(err => {
+    setServiceStatus("bad", "панель: нет связи с сервером");
+    $("#alert-banner").classList.remove("hide");
+    $("#alert-banner").classList.add("bad");
+    $("#alert-banner").textContent = "⚠ панель: " + err.message;
+  });
+}
+
+/* ── поиск ───────────────────────────────────────────────── */
+function renderSearch(data) {
+  const rows = (data && data.results) || [];
+  const tbody = $("#search-rows");
+  if (!rows.length) {
+    tbody.innerHTML = '<tr><td colspan="8" style="text-align:center; padding:24px; color:var(--text-muted);">Ничего не найдено</td></tr>';
+  } else {
+    tbody.innerHTML = rows.map(r => {
+      const when = r.last_code_at ? new Date(r.last_code_at * 1000).toLocaleString("ru-RU") : "—";
+      const matches = (r.matched_codes || []).join(", ");
+      return "<tr>"
+        + '<td class="mono" style="color:#60a5fa; font-weight:500;">' + escapeHtml(r.address || "(без адреса)") + "</td>"
+        + '<td><span class="badge ' + (r.alias ? "st-ok" : "st-dim") + '"><span class="dot"></span><span>' + (r.alias ? "да" : "нет") + "</span></span></td>"
+        + '<td class="mono">' + fmt(r.mails) + "</td>"
+        + '<td class="mono">' + fmt(r.codes) + "</td>"
+        + '<td class="mono" style="font-weight:700;">' + escapeHtml(r.last_code || "—")
+        + (r.last_code ? '<button class="copy-btn" data-copy="' + escapeHtml(r.last_code) + '">copy</button>' : "") + "</td>"
+        + '<td style="color:var(--text-muted); font-size:12px;">' + escapeHtml(when) + "</td>"
+        + '<td class="mono" style="color:var(--text-secondary); font-size:12px;">' + escapeHtml(matches || "—") + "</td>"
+        + '<td><button class="btn-ghost" style="padding:2px 8px; font-size:11px;" data-feed="' + escapeHtml(r.address || "") + '">лента</button> '
+        + '<button class="btn-ghost" style="padding:2px 8px; font-size:11px;" data-add="' + escapeHtml(r.address || "") + '">в реестр</button></td>'
+        + "</tr>";
+    }).join("");
+  }
+  $$("#search-rows [data-copy]").forEach(btn => {
+    btn.onclick = () => { copyText(btn.dataset.copy); btn.classList.add("copied"); setTimeout(() => btn.classList.remove("copied"), 900); };
+  });
+  $$("#search-rows [data-feed]").forEach(btn => {
+    btn.onclick = () => { $("#feed-address").value = btn.dataset.feed; switchTab("codes"); loadFeed(false); };
+  });
+  $$("#search-rows [data-add]").forEach(btn => {
+    btn.onclick = () => {
+      api("/aliases", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ address: btn.dataset.add })
+      }).then(() => { toast("добавлен: " + btn.dataset.add); loadAliases(); loadSummary(); })
+        .catch(err => toast("ошибка: " + err.message));
+    };
+  });
+}
+
+function doSearch() {
+  const q = ($("#search-q").value || "").trim();
+  if (!q) { toast("введи запрос"); return; }
+  $("#search-status").textContent = "ищу…";
+  api("/search?q=" + encodeURIComponent(q)).then(data => {
+    renderSearch(data);
+    $("#search-status").textContent = "найдено: " + data.count;
+  }).catch(err => { $("#search-status").textContent = "ошибка: " + err.message; });
+}
+
+/* ── поиск по содержимому писем (FTS5-индекс) ───────────── */
+function fmtBytes(n) {
+  n = Number(n || 0);
+  if (n >= 1048576) return (n / 1048576).toFixed(1) + " МБ";
+  if (n >= 1024) return Math.round(n / 1024) + " КБ";
+  return n + " Б";
+}
+
+function renderIndexStats(idx) {
+  if (!idx) return;
+  $("#idx-count").textContent = fmt(idx.indexed);
+  $("#idx-offset").textContent = fmt(idx.offset);
+  $("#idx-size").textContent = fmtBytes(idx.db_bytes);
+  const ls = idx.last_sync || {};
+  $("#idx-sync").textContent = ls.at
+    ? (new Date(ls.at * 1000).toLocaleString("ru-RU") + " (+" + (ls.indexed_new || 0) + ")")
+    : "—";
+}
+
+function snippetHtml(snip) {
+  // FTS snippet приходит с <b>подсветкой</b>: экранируем всё, возвращаем <b>
+  return escapeHtml(snip || "")
+    .replace(/&lt;b&gt;/g, '<b style="color:#fbbf24;">')
+    .replace(/&lt;\/b&gt;/g, "</b>");
+}
+
+function renderBodySearch(data) {
+  const rows = (data && data.results) || [];
+  const tbody = $("#body-rows");
+  if (!rows.length) {
+    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; padding:24px; color:var(--text-muted);">'
+      + "Ничего не найдено — либо ника нет в письмах, либо индекс ещё не дошёл (см. счётчики выше)</td></tr>";
+  } else {
+    tbody.innerHTML = rows.map(r => {
+      const code = r.code || "";
+      return "<tr>"
+        + '<td class="mono" style="color:var(--text-muted); font-size:12px; white-space:nowrap;">' + escapeHtml(r.received_at || "—") + "</td>"
+        + '<td class="mono" style="color:#60a5fa; font-weight:500; white-space:nowrap;">' + escapeHtml(r.address || "")
+        + '<button class="copy-btn" data-copy="' + escapeHtml(r.address || "") + '">copy</button></td>'
+        + "<td>" + escapeHtml(r.subject || "(без темы)") + "</td>"
+        + '<td style="color:var(--text-secondary); font-size:12px;">' + escapeHtml(r.from || "—") + "</td>"
+        + '<td style="color:var(--text-secondary); font-size:12px; max-width:380px;">' + snippetHtml(r.snippet) + "</td>"
+        + '<td class="mono" style="font-weight:700; color:' + (code ? "#86efac" : "var(--text-muted)") + ';">'
+        + escapeHtml(code || "—")
+        + (code ? '<button class="copy-btn" data-copy="' + escapeHtml(code) + '">copy</button>' : "") + "</td>"
+        + '<td style="white-space:nowrap;"><button class="btn-ghost" style="padding:2px 8px; font-size:11px;" data-feed="' + escapeHtml(r.address || "") + '">лента</button> '
+        + '<button class="btn-ghost" style="padding:2px 8px; font-size:11px;" data-open-mail="' + escapeHtml(r.id) + '" data-addr="' + escapeHtml(r.address || "") + '">письмо</button></td>'
+        + "</tr>";
+    }).join("");
+  }
+  $$("#body-rows [data-copy]").forEach(btn => {
+    btn.onclick = () => { copyText(btn.dataset.copy); btn.classList.add("copied"); setTimeout(() => btn.classList.remove("copied"), 900); };
+  });
+  $$("#body-rows [data-feed]").forEach(btn => {
+    btn.onclick = () => { $("#feed-address").value = btn.dataset.feed; switchTab("codes"); loadFeed(false); };
+  });
+  $$("#body-rows [data-open-mail]").forEach(btn => {
+    btn.onclick = () => openRaw({ id: btn.dataset.openMail, address: btn.dataset.addr });
+  });
+}
+
+function doBodySearch() {
+  const q = ($("#body-q").value || "").trim();
+  if (!q) { toast("введи ник или фразу"); return; }
+  $("#body-status").textContent = "ищу по индексу…";
+  api("/search_body?q=" + encodeURIComponent(q)).then(data => {
+    renderBodySearch(data);
+    renderIndexStats(data.index);
+    $("#body-status").textContent = "найдено писем: " + data.count
+      + (data.mode === "like" ? " (подстрока)" : "");
+  }).catch(err => { $("#body-status").textContent = "ошибка: " + err.message; });
+}
+
+function doIndexSync() {
+  $("#body-status").textContent = "доиндексирую…";
+  api("/index/sync", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ pages: 20 })
+  }).then(data => {
+    renderIndexStats(data.index);
+    $("#body-status").textContent = "индекс: +" + (data.sync.indexed_new || 0)
+      + " писем (страниц " + (data.sync.pages || 0) + ")";
+    toast("индекс пополнен");
+  }).catch(err => { $("#body-status").textContent = "ошибка: " + err.message; });
+}
+
+/* ── логи ────────────────────────────────────────────────── */
+function renderLogs(lines) {
+  const logEl = $("#log");
+  logEl.innerHTML = lines.map(line => {
+    let cls = "";
+    if (line.includes("[OK]")) cls = "log-row-ok";
+    else if (line.includes("[WARN]")) cls = "log-row-warn";
+    else if (line.includes("[BAD]")) cls = "log-row-bad";
+    else if (line.includes("[INFO]")) cls = "log-row-info";
+    return '<div class="' + cls + '">' + escapeHtml(line) + "</div>";
+  }).join("");
+  logEl.scrollTop = logEl.scrollHeight;
+}
+
+function fetchLogs() {
+  fetch(window.APP_CONFIG.API_BASE + "/logs?tail=200")
+    .then(r => r.text())
+    .then(txt => renderLogs(txt.split("\n").filter(Boolean)))
+    .catch(() => {});
+}
+
+/* ── события ─────────────────────────────────────────────── */
+$("#btn-refresh").onclick = () => {
+  api("/refresh", { method: "POST" })
+    .then(d => { toast("обход запущен (интервал " + d.interval_sec + "с)"); setTimeout(() => { loadSummary(); if (activeTab === "aliases") loadAliases(); }, 3000); })
+    .catch(err => toast("ошибка: " + err.message));
+};
+$("#btn-copy-last").onclick = () => {
+  if (state.lastCode && state.lastCode.code) copyText(state.lastCode.code);
+  else toast("кода ещё нет");
+};
+$("#btn-open-last").onclick = () => {
+  const last = state.lastCode;
+  if (!last || !last.code) { toast("кода ещё нет"); return; }
+  openRaw({ id: last.mail_id, address: last.address });
+};
+$("#btn-feed-load").onclick = () => loadFeed(false);
+$("#btn-feed-more").onclick = () => loadFeed(true);
+$("#feed-address").addEventListener("keydown", e => { if (e.key === "Enter") loadFeed(false); });
+$("#feed-only-codes").onchange = () => loadFeed(false);
+$("#btn-alias-add").onclick = () => {
+  const address = ($("#alias-new").value || "").trim().toLowerCase();
+  if (!address) { toast("введи адрес"); return; }
+  api("/aliases", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ address })
+  }).then(() => { $("#alias-new").value = ""; toast("добавлен: " + address); loadAliases(); loadSummary(); })
+    .catch(err => toast("ошибка: " + err.message));
+};
+$("#alias-new").addEventListener("keydown", e => { if (e.key === "Enter") $("#btn-alias-add").click(); });
+$("#btn-alias-refresh").onclick = () => {
+  api("/refresh", { method: "POST" })
+    .then(() => { toast("обход запущен"); setTimeout(() => { loadAliases(); loadSummary(); }, 4000); })
+    .catch(err => toast("ошибка: " + err.message));
+};
+$("#btn-search").onclick = doSearch;
+$("#search-q").addEventListener("keydown", e => { if (e.key === "Enter") doSearch(); });
+$("#btn-body-search").onclick = doBodySearch;
+$("#body-q").addEventListener("keydown", e => { if (e.key === "Enter") doBodySearch(); });
+$("#btn-index-sync").onclick = doIndexSync;
+$("#btn-log-refresh").onclick = fetchLogs;
+$("#btn-log-clear").onclick = () => { $("#log").innerHTML = '<div style="color:var(--text-muted);">Вид очищен.</div>'; };
+let logTimer = null;
+function setupAutoLog() {
+  if (logTimer) clearInterval(logTimer);
+  if ($("#log-auto-refresh").checked) logTimer = setInterval(fetchLogs, 5000);
+}
+$("#log-auto-refresh").onchange = setupAutoLog;
+
+/* ── запуск ──────────────────────────────────────────────── */
+loadSummary();
+loadFeed(false);
+renderLogs(["[запуск] панель apimail-panel: ждём данные от 127.0.0.1:" + window.APP_CONFIG.DEFAULT_PORT]);
+setupAutoLog();
+
+setInterval(loadSummary, window.APP_CONFIG.POLL_INTERVAL_MS);
+setInterval(() => { if (activeTab === "codes") loadFeed(false); }, window.APP_CONFIG.FEED_REFRESH_MS);
+setInterval(() => { if (activeTab === "aliases") loadAliases(); }, 30000);
+</script>
+</body>
+</html>

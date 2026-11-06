@@ -1,0 +1,10 @@
+# секреты — только локально
+config.json
+
+# рабочая история панели
+data/*
+!data/.gitkeep
+
+# python
+__pycache__/
+*.pyc

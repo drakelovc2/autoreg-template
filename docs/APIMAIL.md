@@ -30,6 +30,21 @@
 - `wait_code()` / `wait_link()` вытаскивают 6-значный код или verify-ссылку.
 - `baseline()` фиксирует «сколько писем уже было» — для двухфазного `pending`.
 
+## Своя панель (исходники в репо)
+
+В `apimail/` лежит панель для **своего** catch-all движка: последний код, лента
+писем, реестр алиасов, поиск. Зависимостей нет — только stdlib Python.
+
+```bash
+cd apimail
+cp config.example.json config.json   # mail_base, mail_domain, admin_key
+bash start.sh                        # http://127.0.0.1:9971
+```
+
+Панель — это UI, а не сам движок: письма она читает через
+`GET {mail_base}/admin/mails` с заголовком `x-admin-auth`. Движок (catch-all
+worker / SMTP-приёмник) остаётся ваш.
+
 ## Чего в репозитории нет
 
 - реальных доменов, адресов, admin-ключей и ящиков;
