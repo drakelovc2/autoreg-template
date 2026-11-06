@@ -6,6 +6,7 @@ GET {MAIL_BASE}/admin/mails?address=<addr>&limit=N&offset=0
   Ответ: {"results": [{"id", "raw" (MIME), ...}]}
 
 No mailbox needs to be created: any address on the catch-all domain is accepted.
+Провайдер по умолчанию — apimail (бот @apimaildrakebot); домены/ключи только в config.json.
 Универсально: умеет и verify-ССЫЛКУ (`wait_link`), и 6-значный КОД (`wait_code`).
 Хост ссылки берётся из config.BASE_URL — ничего не хардкодим под сервис.
 """

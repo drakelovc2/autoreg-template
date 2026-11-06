@@ -13,7 +13,7 @@
     "example.com"
   ],
   "mail_dot_domains": [],
-  "_mail_note": "Catch-all mail provider. Fill mail_base/mail_admin_key with your own instance.",
+  "_mail_note": "Catch-all mail provider (apimail / @apimaildrakebot). Fill mail_base/mail_admin_key with your own instance; no real domains, addresses or keys are bundled.",
   "gmail": {
     "_комментарий": "Optional second mail source: Gmail plus-aliases.",
     "enabled": false,
