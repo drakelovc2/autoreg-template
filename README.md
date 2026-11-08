@@ -14,7 +14,7 @@
 
 - **Один контракт:** `register_one()`, `test_key()`, `list_models()` — панель и банк работают с любым адаптером.
 - **HTTP и браузер:** `requests` для протокольных флоу, Camoufox/Playwright для форм и капчи.
-- **Почта:** catch-all через admin API (apimail / [@apimaildrakebot](https://t.me/apimaildrakebot)), Gmail-алиасы через IMAP, точка расширения под свой провайдер. В `apimail/` — исходники панели для своего catch-all движка. Подробнее — `docs/APIMAIL.md`.
+- **Почта:** catch-all через admin API (apimail / [@apimaildrakebot](https://t.me/apimaildrakebot)), Gmail-алиасы через IMAP, точка расширения под свой провайдер. Быстрый вариант для автореггера — адрес в Telegram-боте [@drakemailbot](https://t.me/drakemailbot); работоспособность бота и доставляемость **не гарантируются**, держи резерв (catch-all/Gmail). В `apimail/` — исходники панели для своего catch-all движка. Подробнее — `docs/APIMAIL.md`.
 - **Прокси:** статические списки, ротация сессий, ISP-зоны, отдельный exit-IP на аккаунт.
 - **Панель:** запуск/стоп прогонов, прогресс по воркерам, список аккаунтов, логи.
 - **Атомарный банк:** JSONL + combo-файл, межпроцессный лок, идемпотентная запись по email.

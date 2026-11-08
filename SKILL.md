@@ -54,6 +54,13 @@ Hard-won rules:
   config, cap attempts (`card_max_attempts`) — declined attempts build Radar risk.
 - Run the card step direct: Bright Data rejects `CONNECT api.stripe.com` (403).
 
+## Mail
+
+- **Mail for signup:** a catch-all domain (own worker + admin API) or Gmail + app-password/IMAP is the
+  reliable path. A quick option is an address from the Telegram bot @drakemailbot, but its
+  availability and deliverability are **not guaranteed** (bots go down, some services blacklist
+  temp domains) — keep a fallback and test delivery before running a batch.
+
 ## Rules
 
 - Never use the skill against a service without the owner's permission.
