@@ -67,6 +67,28 @@ _DEFAULTS = {
     "batch_interval_sec": 25,
     "circuit_breaker_fails": 5,
 
+    # ── cardkit: авто-бины и карты (core/cardkit.py) ────────────────────
+    # Сервисы с шагом «привяжи карту → бонус»: карта генерится по BIN (Luhn,
+    # алгоритм chkr.cc), проверяется через api.chkr.cc, оплата — Stripe API.
+    "card_bins": [],
+    # any  — брать первую сгенерированную (мёртвые карты часто проходят $0-предавторизацию)
+    # live — гонять через chkr.cc до статуса Live (медленно, лимит API)
+    # off  — генератор выключен, используем card_number
+    "card_bin_mode": "any",
+    "card_max_attempts": 6,
+    "card_ttl_years": [2, 5],
+    "card_zip": "10001",
+    "card_number": "",
+    "card_mm": "",
+    "card_yyyy": "",
+    "card_cvv": "",
+    "chkr_api": "https://api.chkr.cc/",
+    "chkr_check_interval_sec": 2.5,
+    "chkr_max_429_retries": 3,
+    "chkr_max_generate": 40,
+    "stripe_pk": "",
+    "card_step_direct": True,
+
     "output_jsonl": os.path.join(DATA_DIR, "accounts.jsonl"),
     "output_combo": os.path.join(DATA_DIR, "accounts.txt"),
     # Two-phase: аккаунты, зарегистрированные, но ещё не подтверждённые.

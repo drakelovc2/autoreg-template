@@ -18,6 +18,42 @@ This skill turns a service-specific signup flow into a small adapter on top of a
 7. **Run.** Start the panel, run a small batch with pauses, and stop on repeated hard blocks.
 8. **Report.** Write a short report: flow, endpoints, what was verified live, limits, and known blockers.
 
+## Bins & cards (Stripe)
+
+Services that pay credit when a card is bound ("bind a card → get $N") need a card
+step. Use `core/cardkit.py` — it covers generation, checking and Stripe calls.
+
+1. **BIN → PAN (offline, free).** `gen_card("461994")` replicates the chkr.cc
+   generator: the BIN (with optional `x` wildcards) is padded to 15/16 digits and
+   filled with random digits so the whole number passes Luhn. Returns
+   `PAN|MM|YYYY|CVV` as a `Card`. BIN list lives in `config.json` (`card_bins`).
+2. **Checker (chkr.cc).** `check_card(card)` posts to `https://api.chkr.cc/`
+   (`Origin`/`Referer: https://chkr.cc` are mandatory, otherwise 403), paces
+   requests `chkr_check_interval_sec` (2.5 s, same as the site), handles 429 with
+   `retryAfter`, and returns `{code: 1 Live / 0 Die / 2 Unknown, status, bank, ...}`.
+   `pick_card()` combines generator + checker per `card_bin_mode`
+   (`any` — first card, dead cards often pass $0 pre-auth; `live` — poll until
+   Live; `off` — fixed `card_number`).
+3. **Stripe (no browser needed for API calls).** `stripe_create_pm`,
+   `stripe_confirm_setup`, `stripe_confirm_payment` hit `api.stripe.com` with the
+   merchant's publishable key (`stripe_pk`), and `stripe_error()` turns the
+   response into a readable decline.
+
+Hard-won rules:
+
+- Many merchants disable **publishable-key tokenization** outside their own
+  surfaces → `unsupported_publishable_key_tokenization_surface`. Then the card
+  must be entered in a browser on the merchant's domain (Card/Payment Element).
+- Tokenize with the **Element instance** (`stripe.createPaymentMethod({type:'card', card: element})`),
+  never with raw card data (blocked), then confirm the SetupIntent **server-side**
+  with `payment_method=pm_…` — that call is allowed and returns honest JSON.
+- `stripe.confirmCardSetup(...)` **inside the browser** can hang forever: Stripe
+  Radar runs an hCaptcha challenge that never resolves in headless. Don't wait on it.
+- Some BINs decline while others pass on the same merchant (e.g. one Visa BIN
+  succeeded while a Mastercard BIN gave `generic_decline`). Keep BIN lists in
+  config, cap attempts (`card_max_attempts`) — declined attempts build Radar risk.
+- Run the card step direct: Bright Data rejects `CONNECT api.stripe.com` (403).
+
 ## Rules
 
 - Never use the skill against a service without the owner's permission.
@@ -30,6 +66,8 @@ This skill turns a service-specific signup flow into a small adapter on top of a
 
 - `README.md`
 - `docs/ARCHITECTURE.md`
+- `docs/CARDKIT.md` — авто-бины/карты (chkr.cc + Stripe), если у сервиса карточный шаг
 - `core/register.py`
+- `core/cardkit.py`
 - `core/config.py`
 - `core/results.py`
