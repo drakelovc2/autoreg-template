@@ -45,6 +45,43 @@ bash start.sh                        # http://127.0.0.1:9971
 `GET {mail_base}/admin/mails` с заголовком `x-admin-auth`. Движок (catch-all
 worker / SMTP-приёмник) остаётся ваш.
 
+## Несколько движков сразу (мультиаккаунт)
+
+Cloudflare D1 на free-плане даёт **5M строк чтения и 100k записи в сутки на
+аккаунт**; при массовых прогонах квота кончается, и движок начинает отвечать
+`D1_ERROR: ... daily row read limit`. Лечится вторым catch-all на другом
+CF-аккаунте.
+
+`MailClient` (`core/mail.py`) умеет список движков — домен адреса решает,
+откуда читать:
+
+```json
+"mail_accounts": [
+  {"base": "https://mail1.example.com", "admin_key": "…",
+   "domains": ["a.example.com"]},
+  {"base": "https://mail2.example.net", "admin_key": "…",
+   "domains": ["b.example.net"]}
+]
+```
+
+- `new_address()` берёт случайный домен из всех движков;
+- `list_mails()` / `wait_link()` идут в тот движок, которому принадлежит домен;
+- пустой `mail_accounts` → старый режим (`mail_base` + `mail_domains`).
+
+Свой catch-all на Cloudflare (Email Routing → Worker → D1) с тем же admin API:
+`autoreg/apimail-worker/` в инфраструктурном репо — воркер, схема и деплой.
+
+## Лимиты D1
+
+Лимиты считаются **на Cloudflare-аккаунт**, сброс в 00:00 UTC. Расход видно в
+Cloudflare GraphQL (`d1AnalyticsAdaptiveGroups`, сумма `rowsRead`/`rowsWritten`
+за день). Панель-агрегатор, которая показывает оба движка и дневные проценты,
+живёт отдельно от публичного шаблона (см. `apimail-hub` в инфраструктуре).
+
+Практика: не поллить «все письма» без `address`, держать интервал панели
+≥ 120 с и не сканировать историю — иначе квота выжирается панелью, а не
+реггером.
+
 ## Чего в репозитории нет
 
 - реальных доменов, адресов, admin-ключей и ящиков;
